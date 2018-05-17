@@ -1,0 +1,16 @@
+version: '2'
+services:
+  backupserver:
+    image: evermind/rsyncbackup-server:latest
+    environment:
+      BACKUP_CLIENTS: ${BACKUP_CLIENT_LIST}
+    volumes:
+    - /data/rsyncbackup:/data
+    - /etc/localtime:/etc/localtime
+    ports:
+    - 2201:22/tcp
+    - 8080:8080/tcp
+    labels:
+      io.rancher.scheduler.affinity:host_label: ${BACKUPSERVER_HOST_LABEL}
+      io.rancher.container.hostname_override: container_name
+      io.rancher.container.pull_image: always

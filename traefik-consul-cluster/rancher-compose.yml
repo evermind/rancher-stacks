@@ -1,0 +1,13 @@
+---
+
+version: '2'
+services:
+  consul:
+    retain_ip: true
+    health_check:
+      port: 8500
+      request_line: /v1/health/node/my-node
+      interval: 5000
+      response_timeout: 3000
+      unhealthy_threshold: 2
+      healthy_threshold: 2

@@ -1,0 +1,75 @@
+---
+
+version: 2
+services:
+  consul:
+    image: consul:1.0.7
+    command: |
+      agent
+      -server
+      -bootstrap-expect=2
+      -data-dir=/consul/data
+      -client=0.0.0.0
+      -disable-host-node-id=true
+      -retry-join=consul
+      -protocol=3
+      -raft-protocol=3
+#      -log-level=debug
+    environment:
+      CONSUL_LOCAL_CONFIG: |
+        {
+          "autopilot": {
+            "cleanup_dead_servers":true,
+            "server_stabilization_time":"10s",
+            "last_contact_threshold":"10s"
+          },
+          "ports": {
+            "serf_lan": 8350,
+            "serf_wan": -1
+          }
+        }
+    labels:
+        io.rancher.container.pull_image: always
+        io.rancher.container.hostname_override: container_name
+        io.rancher.scheduler.global: 'true'
+        io.rancher.scheduler.affinity:host_label: traefik.consul-server=true
+    volumes:
+      - /data/rancher-data/{{ .Stack.Name }}/consul:/consul/data
+
+  traefik:
+    depends_on:
+      - consul
+    image: traefik:v1.6.1
+    command: |
+      -c /dev/null
+      --api
+      --logLevel=INFO
+      --consul
+      --consul.endpoint=consul:8500
+      --consul.prefix=traefik
+      --rancher
+      --rancher.domain=rancher.localhost
+      --rancher.exposedbydefault=true
+      --rancher.metadata=true
+      --rancher.enableServiceHealthFilter=true
+      --rancher.constraints=tag==public
+      --entryPoints='Name:http Address::80 Redirect.EntryPoint:https'
+      --entryPoints='Name:https Address::443 TLS Compress:true'
+      --defaultentrypoints=http,https
+      --acme
+      --acme.onHostRule=true
+      --acme.email=test@example.com
+      --acme.storage=traefik/acme/account
+      --acme.entryPoint=https
+      --acme.httpChallenge.entryPoint=http
+      storeconfig
+    ports:
+      - 80:80
+      - 443:443
+    labels:
+        io.rancher.container.pull_image: always
+        io.rancher.container.hostname_override: container_name
+        io.rancher.scheduler.global: 'true'
+        io.rancher.scheduler.affinity:host_label: traefik.entrypoint=true
+        io.rancher.container.agent.role: environment
+        io.rancher.container.create_agent: true

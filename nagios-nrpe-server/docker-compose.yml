@@ -1,0 +1,18 @@
+version: '2'
+services:
+  nrpe:
+    image: evermind/nrpe
+    environment:
+      ALLOWED_HOSTS: ${NRPE_ALLOWED_HOSTS}
+      SSL_ENABLED: 'true'
+    ports:
+      - 5666:5666/tcp
+    labels:
+      io.rancher.scheduler.global: 'true'
+      io.rancher.container.hostname_override: container_name
+      io.rancher.container.pull_image: always
+    volumes:
+    - /etc/localtime:/etc/localtime
+    {{- if eq .Values.HAS_DATA_VOLUME "true" }}
+    - /data:/data
+    {{- end }}

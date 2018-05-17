@@ -1,0 +1,24 @@
+---
+
+version: '2'
+
+services:
+  backup-client:
+    image: "evermind/rsyncbackup-client"
+    command: schedule auto
+    restart: unless-stopped
+    labels:
+      io.rancher.scheduler.global: 'true'
+      io.rancher.container.pull_image: always
+      io.rancher.container.hostname_override: container_name
+      io.rancher.scheduler.affinity:host_label: backup=true
+    environment:
+      BACKUP_SERVER_PORT: 2201
+      BACKUP_SERVER_PUBLIC_KEY: ${BACKUP_SERVER_LIST}
+      BACKUP_VOLUMES: RANCHER_DATA
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /data/rancher-data/{{ .Stack.Name }}:/data/conf
+      - /data/rancher-data:/data/volumes/RANCHER_DATA:ro
+    cap_add:
+      - SYS_ADMIN
