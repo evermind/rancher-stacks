@@ -13,6 +13,5 @@ services:
       io.rancher.container.pull_image: always
     volumes:
     - /etc/localtime:/etc/localtime
-    {{- if eq .Values.HAS_DATA_VOLUME "true" }}
-    - /data:/data
-    {{- end }}
+    - /:/vol/root:ro
+    - /data:/vol/data:ro
