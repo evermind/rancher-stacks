@@ -1,0 +1,32 @@
+---
+
+version: "2"
+
+services:
+  gitea:
+    image: gitea/gitea:1.4.3
+    depends_on:
+      - db
+    labels:
+      io.rancher.scheduler.affinity:host_label: ${HOST_LABEL}
+      io.rancher.container.hostname_override: container_name
+      io.rancher.container.pull_image: always
+      io.rancher.sidekicks: db
+      traefik.port: 3000
+      traefik.tags: public
+      traefik.frontend.rule: 'Host:${DOMAIN}'
+    ports:
+      - 2007:22/tcp
+    volumes:
+      - /data/rancher-data/{{ .Stack.Name }}/data:/data
+    restart: unless-stopped
+  db:
+    image: mariadb:10
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=gitea
+      - MYSQL_USER=gitea
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - /data/rancher-data/{{ .Stack.Name }}/db:/var/lib/mysql
+    restart: unless-stopped
