@@ -3,7 +3,7 @@
 version: 2
 services:
   consul:
-    image: consul:1.0.7
+    image: consul:1.2.2
     command: |
       agent
       -server
@@ -14,7 +14,6 @@ services:
       -retry-join=consul
       -protocol=3
       -raft-protocol=3
-#      -log-level=debug
     environment:
       CONSUL_LOCAL_CONFIG: |
         {
@@ -39,11 +38,11 @@ services:
   traefik:
     depends_on:
       - consul
-    image: traefik:v1.6.1
+    image: traefik:v1.6.5
     command: |
       -c /dev/null
       --api
-      --logLevel=INFO
+      --logLevel=WARN
       --consul
       --consul.endpoint=consul:8500
       --consul.prefix=traefik
@@ -57,8 +56,9 @@ services:
       --entryPoints='Name:https Address::443 TLS Compress:true'
       --defaultentrypoints=http,https
       --acme
+      --acme.acmeLogging = true
       --acme.onHostRule=true
-      --acme.email=test@example.com
+      --acme.email=""
       --acme.storage=traefik/acme/account
       --acme.entryPoint=https
       --acme.httpChallenge.entryPoint=http
@@ -73,3 +73,12 @@ services:
         io.rancher.scheduler.affinity:host_label: traefik.entrypoint=true
         io.rancher.container.agent.role: environment
         io.rancher.container.create_agent: true
+        {{- if ne .Values.TRAEFIK_WEBUI_RULE "" }}
+        traefik.tags: public
+        traefik.port: 8080
+        traefik.frontend.rule: ${TRAEFIK_WEBUI_RULE}
+        {{- if ne .Values.TRAEFIK_WEBUI_USERS "" }}
+        traefik.frontend.auth.basic: ${TRAEFIK_WEBUI_USERS} 
+        {{- end }}
+        {{- end }}
+
