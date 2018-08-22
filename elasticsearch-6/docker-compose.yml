@@ -1,0 +1,87 @@
+---
+
+version: '2'
+
+services:
+
+  es-frontend:
+    image: micwy/docker-es-frontend:6.x
+    environment:
+      ELASTICSEARCH_URL: 'http://elasticsearch:9200'
+      USERS: ${ELASTICSEARCH_USERS}
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.container.hostname_override: container_name
+      io.rancher.scheduler.affinity:host_label: ${ELASTICSEARCH_HOST_LABEL}
+      io.rancher.scheduler.affinity:container_label_ne: io.rancher.stack_service.name=$${stack_name}/$${service_name}
+      io.rancher.scheduler.global: 'true'
+      traefik.port: 80
+      traefik.tags: public
+      traefik.frontend.rule: 'Host:${ELASTICSEARCH_DOMAIN}'
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.2.4
+    volumes_from:
+      - elasticsearch-storage
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.container.hostname_override: container_name
+      io.rancher.scheduler.affinity:host_label: ${ELASTICSEARCH_HOST_LABEL}
+      io.rancher.scheduler.affinity:container_label_ne: io.rancher.stack_service.name=$${stack_name}/$${service_name}
+      io.rancher.scheduler.global: 'true'
+      io.rancher.sidekicks: elasticsearch-storage
+    environment:
+      - cluster.name=elasticsearch
+      - node.name=$${HOSTNAME}
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      - node.master=true
+      - node.data=true
+      - node.ingest=true
+      - "ES_JAVA_OPTS=-Xms3072m -Xmx3072m"
+      - xpack.security.enabled=false
+      - TZ=Europe/Berlin
+    volumes:
+      - /etc/localtime:/etc/localtime
+
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    mem_swappiness: 0
+    cap_add:
+      - IPC_LOCK
+
+  elasticsearch-storage:
+    labels:
+      io.rancher.container.start_once: true
+    network_mode: none
+    image: rawmind/alpine-volume:0.0.2-1
+    environment:
+      - SERVICE_UID=1000
+      - SERVICE_GID=1000
+      - SERVICE_VOLUME=/usr/share/elasticsearch/data
+    volumes:
+      - /data/rancher-data/{{ .Stack.Name }}:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana-oss:6.2.4
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.container.hostname_override: container_name
+      io.rancher.scheduler.affinity:container_label_ne: io.rancher.stack_service.name=$${stack_name}/$${service_name}
+      io.rancher.scheduler.global: 'true'
+      io.rancher.scheduler.affinity:host_label: ${ELASTICSEARCH_HOST_LABEL}
+      traefik.port: 5601
+      traefik.tags: public
+      traefik.frontend.rule: 'Host:$ELASTICSEARCH_DOMAIN;PathPrefixStrip:/kibana'
+      traefik.frontend.auth.basic: '${ELASTICSEARCH_USERS}'
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      SERVER_BASEPATH: /kibana
+      TZ: Europe/Berlin
+    volumes:
+      - /etc/localtime:/etc/localtime
