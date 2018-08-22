@@ -1,0 +1,19 @@
+version: '2'
+services:
+  nfs4-server:
+    image: evermind/nfs4-server
+    privileged: true
+    environment:
+      ALLOWED_CLIENTS: ${ALLOWED_CLIENTS}
+    ports:
+      - ${PUBLIC_PORT}:2049/tcp
+    labels:
+      io.rancher.scheduler.global: 'true'
+      io.rancher.container.hostname_override: container_name
+      io.rancher.container.pull_image: always
+      {{- if ne .Values.HOST_LABEL "" }}
+      io.rancher.scheduler.affinity:host_label: ${HOST_LABEL}
+      {{- end }}
+    volumes:
+    - /etc/localtime:/etc/localtime
+    - ${EXPORTED_PATH}:/export
